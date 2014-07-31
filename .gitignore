@@ -1,5 +1,7 @@
-pokerface.iml
-atlassian-ide-plugin.xml
-node_modules/
+/node_modules/
+npm-debug.log
+
+.DS_Store
 .idea/
-./*.js
+*.iml
+atlassian-ide-plugin.xml
