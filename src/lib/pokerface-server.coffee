@@ -11,8 +11,8 @@ Licensed under the GNU GPLv3 license.
 'use strict'
 
 exports.server = ->
-  io = require("socket.io").listen 8081
-  poker = require "./vendor/node-poker"
+  io = require("socket.io").listen 9001
+  poker = require("node-poker")
 
   clients = {} # contains a list of socket objects, one for each client
   players = [] # contains an array of socket.id to match poker player with socket clients
