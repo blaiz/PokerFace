@@ -12,7 +12,7 @@ Licensed under the GNU GPLv3 license.
 
 exports.server = ->
   io = require("socket.io").listen(process.env.PORT || 9001)
-  console.log "Listening on port ", process.env.PORT
+  console.log "Listening on port ", process.env.PORT || 9001
   require('webrtc.io').listen 9002
   poker = require "node-poker"
   cookie = require "cookie"
