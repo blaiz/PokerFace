@@ -33,6 +33,7 @@
     "cookie": "^0.1.2",
     "node-poker": "ChrisZieba/node-poker",
     "socket.io": "^1.0.6",
+    "webrtc.io": "0.0.4",
     "coffee-script": "latest"
   },
   "engines": {
