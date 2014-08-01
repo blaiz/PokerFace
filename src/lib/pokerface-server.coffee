@@ -12,10 +12,11 @@ Licensed under the GNU GPLv3 license.
 
 exports.server = ->
   io = require("socket.io").listen 9001
-  poker = require("node-poker")
+  poker = require "node-poker"
+  cookie = require "cookie"
 
   clients = {} # contains a list of socket objects, one for each client
-  players = [] # contains an array of socket.id to match poker player with socket clients
+  players = [] # contains an array of playerId to match poker player with socket clients
   table = null # our master table object
   playerIdCount = lastBet = 0
 
@@ -24,23 +25,23 @@ exports.server = ->
     # this doesn't start the game yet
     if playerIdCount is 0
       table = new poker.Table 1, 2, 2, 10, 200, 200
+      
+    playerId = cookie.parse(socket.request.headers.cookie).playerId if socket.request.headers.cookie?
 
     # if this is a new client, add it to the list of clients, and create a player Object for them
-    if not clients[socket.id]?
-      clients[socket.id] = {
-        socket,
-        playerId: playerIdCount
-      }
-      players.push socket.id
-      table.AddPlayer socket.id, playerIdCount, "No Name", 200
+    if not playerId? or not clients[playerId]?
+      playerId = playerIdCount
+      players.push playerId
+      table.AddPlayer playerId, playerIdCount, "No Name", 200
       playerIdCount++
 
-    playerId = clients[socket.id].playerId
-    socket.emit "setPlayerId", clients[socket.id].playerId
+    clients[playerId] = {socket, playerId}
+    playerId = clients[playerId].playerId
+    socket.emit "setPlayerId", clients[playerId].playerId
 
     # if player joins after the game has started, let's send them their hand now
     if table.game?
-      socket.emit "addHand", table.players[clients[socket.id].playerId].cards
+      socket.emit "addHand", table.players[clients[playerId].playerId].cards
 
     sendState table
 

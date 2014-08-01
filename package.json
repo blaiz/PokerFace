@@ -30,6 +30,7 @@
     "grunt": "~0.4.2"
   },
   "dependencies": {
+    "cookie": "^0.1.2",
     "node-poker": "ChrisZieba/node-poker",
     "socket.io": "^1.0.6"
   }
