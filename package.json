@@ -32,7 +32,8 @@
   "dependencies": {
     "cookie": "^0.1.2",
     "node-poker": "ChrisZieba/node-poker",
-    "socket.io": "^1.0.6"
+    "socket.io": "^1.0.6",
+    "coffee-script": "latest"
   },
   "engines": {
     "node": "0.10.x"
