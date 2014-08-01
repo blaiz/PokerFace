@@ -11,7 +11,7 @@ Licensed under the GNU GPLv3 license.
 'use strict'
 
 exports.server = ->
-  io = require("socket.io").listen 9001
+  io = require("socket.io").listen(process.env.PORT || 9001)
   console.log "Listening on port 9001"
   poker = require "node-poker"
   cookie = require "cookie"
