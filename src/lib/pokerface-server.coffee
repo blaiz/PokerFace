@@ -12,6 +12,7 @@ Licensed under the GNU GPLv3 license.
 
 exports.server = ->
   io = require("socket.io").listen 9001
+  require('webrtc.io').listen 9002
   poker = require "node-poker"
   cookie = require "cookie"
 
