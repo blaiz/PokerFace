@@ -18,6 +18,7 @@ exports.server = ->
   cookie = require "cookie"
 
   clients = {} # contains a list of socket objects, one for each client
+  clientDisconnectTimeouts = {} # list of potential timeoutObjects to cancel player disconnection if player comes back online
   players = [] # contains an array of playerId to match poker player with socket clients
   table = null # our master table object
   playerIdCount = lastBet = 0
@@ -36,6 +37,10 @@ exports.server = ->
       players.push playerId
       table.AddPlayer playerId, playerIdCount, "No Name", 200
       playerIdCount++
+    else if clientDisconnectTimeouts[playerId]?
+      console.log "Cancelling disconnection of player # ", playerId
+      clearTimeout clientDisconnectTimeouts[playerId]
+      delete clientDisconnectTimeouts[playerId]
 
     clients[playerId] = {socket, playerId}
     playerId = clients[playerId].playerId
@@ -84,8 +89,12 @@ exports.server = ->
         }
 
     socket.on "removePlayer", ->
-      table.players.splice playerId, 1 # @todo handle properly
-      sendState table
+      console.log "Setting timeout to remove player ", playerId, " in 10 seconds"
+      clientDisconnectTimeouts[playerId] = setTimeout ->
+        console.log "Removing player # ", playerId, " now"
+        table.players.splice playerId, 1 # @todo handle properly
+        sendState table
+      , 10000
 
     socket.on "renamePlayer", (name) ->
       table.players[playerId].playerName = name
