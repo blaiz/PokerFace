@@ -65,6 +65,7 @@ exports.server = ->
       sendState table
 
     socket.on "bet", (amount) ->
+      amount = parseInt amount, 10
       # check is a bet of 0
       if amount is 0
         table.players[playerId].Check()
