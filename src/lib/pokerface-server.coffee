@@ -19,36 +19,36 @@ exports.server = ->
 
   clients = {} # contains a list of socket objects, one for each client
   clientDisconnectTimeouts = {} # list of potential timeoutObjects to cancel player disconnection if player comes back online
-  players = [] # contains an array of playerId to match poker player with socket clients
+  players = [] # contains an array of playerID to match poker player with socket clients
   table = null # our master table object
-  playerIdCount = lastBet = 0
+  playerIDCount = lastBet = 0
 
   io.sockets.on "connection", (socket) ->
     # if this is the first client, let's create a table
     # this doesn't start the game yet
-    if playerIdCount is 0
+    if playerIDCount is 0
       table = new poker.Table 1, 2, 2, 10, 200, 200
-      
-    playerId = cookie.parse(socket.request.headers.cookie).playerId if socket.request.headers.cookie?
+
+    playerID = cookie.parse(socket.request.headers.cookie).playerID if socket.request.headers.cookie?
 
     # if this is a new client, add it to the list of clients, and create a player Object for them
-    if not playerId? or not clients[playerId]?
-      playerId = playerIdCount
-      players.push playerId
-      table.AddPlayer playerId, playerIdCount, "No Name", 200
-      playerIdCount++
-    else if clientDisconnectTimeouts[playerId]?
-      console.log "Cancelling disconnection of player # ", playerId
-      clearTimeout clientDisconnectTimeouts[playerId]
-      delete clientDisconnectTimeouts[playerId]
+    if not playerID? or not clients[playerID]?
+      playerID = playerIDCount
+      players.push playerID
+      table.AddPlayer playerID, playerIDCount, "No Name", 200
+      playerIDCount++
+    else if clientDisconnectTimeouts[playerID]?
+      console.log "Cancelling disconnection of player # ", playerID
+      clearTimeout clientDisconnectTimeouts[playerID]
+      delete clientDisconnectTimeouts[playerID]
 
-    clients[playerId] = {socket, playerId}
-    playerId = clients[playerId].playerId
-    socket.emit "setPlayerId", clients[playerId].playerId
+    clients[playerID] = {socket, playerID}
+    playerID = clients[playerID].playerID
+    socket.emit "setPlayerId", clients[playerID].playerID
 
     # if player joins after the game has started, let's send them their hand now
     if table.game?
-      socket.emit "addHand", table.players[clients[playerId].playerId].cards
+      socket.emit "addHand", table.players[clients[playerID].playerID].cards
 
     sendState table
 
@@ -57,27 +57,27 @@ exports.server = ->
       table.StartGame()
       # give each player their hand
       for key, client of clients
-        client.socket.emit "addHand", table.players[client.playerId].cards
+        client.socket.emit "addHand", table.players[client.playerID].cards
       sendState table
 
     socket.on "fold", ->
-      table.players[playerId].Fold()
+      table.players[playerID].Fold()
       sendState table
 
     socket.on "bet", (amount) ->
       amount = parseInt amount, 10
       # check is a bet of 0
       if amount is 0
-        table.players[playerId].Check()
+        table.players[playerID].Check()
         # all in is a bet of all chips
-      else if amount is table.players[playerId].chips
-        table.players[playerId].AllIn()
+      else if amount is table.players[playerID].chips
+        table.players[playerID].AllIn()
         # call is a bet the same amount as the last bet
       else if amount is lastBet
-        table.players[playerId].Call()
+        table.players[playerID].Call()
         # betting more than last time (bet or raise)
       else
-        table.players[playerId].Bet amount
+        table.players[playerID].Bet amount
         lastBet = amount
       sendState table
 
@@ -85,20 +85,20 @@ exports.server = ->
       # a player decided to show their hand, let's send their hand to everyone
       for key, client of clients
         client.socket.emit "showHand", {
-          playerId,
-          cards: table.players[playerId].cards
+          playerID,
+          cards: table.players[playerID].cards
         }
 
     socket.on "removePlayer", ->
-      console.log "Setting timeout to remove player ", playerId, " in 10 seconds"
-      clientDisconnectTimeouts[playerId] = setTimeout ->
-        console.log "Removing player # ", playerId, " now"
-        table.players.splice playerId, 1 # @todo handle properly
+      console.log "Setting timeout to remove player ", playerID, " in 10 seconds"
+      clientDisconnectTimeouts[playerID] = setTimeout ->
+        console.log "Removing player # ", playerID, " now"
+        table.players.splice playerID, 1 # @todo handle properly
         sendState table
       , 10000
 
     socket.on "renamePlayer", (name) ->
-      table.players[playerId].playerName = name
+      table.players[playerID].playerName = name
       sendState table
 
   ###
