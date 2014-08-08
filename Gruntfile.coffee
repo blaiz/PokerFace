@@ -30,12 +30,16 @@ module.exports = (grunt)->
         src: ['**/*.coffee']
         dest: 'out/lib/'
         ext: '.js'
+        options:
+          sourceMap: true
       test:
         expand: true
         cwd: 'src/test/'
         src: ['**/*.coffee']
         dest: 'out/test/'
         ext: '.js'
+        options:
+          sourceMap: true
     simplemocha:
       all:
         src: [
