@@ -30,11 +30,12 @@
     "grunt": "~0.4.2"
   },
   "dependencies": {
-    "cookie": "^0.1.2",
+    "coffee-script": "latest",
+    "cors": "^2.4.1",
+    "express": "^4.8.2",
     "node-poker": "ChrisZieba/node-poker",
     "socket.io": "^1.0.6",
-    "webrtc.io": "0.0.4",
-    "coffee-script": "latest"
+    "webrtc.io": "0.0.4"
   },
   "engines": {
     "node": "0.10.x"

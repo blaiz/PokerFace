@@ -11,95 +11,118 @@ Licensed under the GNU GPLv3 license.
 'use strict'
 
 exports.server = ->
-  io = require("socket.io").listen(process.env.PORT || 9001)
-  console.log "Listening on port ", process.env.PORT || 9001
-  require('webrtc.io').listen 9002
-  poker = require "node-poker"
-  cookie = require "cookie"
+  pokerEngine = require "node-poker"
 
-  clients = {} # contains a list of socket objects, one for each client
+  app = require("express")()
+  io = require("socket.io").listen 10001
+  require('webrtc.io').listen 10002
+  cors = require "cors"
+
+  app.use cors()
+
+  app.listen process.env.PORT || 10000
+  console.log "Listening on port ", process.env.PORT || 10000
+
+  app.post "/gameroom", (req, res) ->
+    uid = generateUID() while gameRooms.hasOwnProperty(uid) # make sure we generate a uid not already being used
+    res.json
+      id: generateUID()
+
+  # from http://stackoverflow.com/a/6248722
+  generateUID = ->
+    ("0000" + (Math.random()*Math.pow(36,4) << 0).toString(36)).slice(-4)
+
+  gameRooms = {}
   clientDisconnectTimeouts = {} # list of potential timeoutObjects to cancel player disconnection if player comes back online
-  players = [] # contains an array of playerID to match poker player with socket clients
-  table = null # our master table object
-  playerIDCount = lastBet = 0
+    
+  io.of("/gameroom").on "connection", (socket) ->
+    console.info "New client connected with ID ", socket.id
+    gameRoomId = null
+    gameRoom = {}
+    playerID = null
+    
+    socket.on "joinGameRoom", (IDs) ->
+      {gameRoomId, playerId} = IDs
+      socket.join gameRoomId
 
-  io.sockets.on "connection", (socket) ->
-    # if this is the first client, let's create a table
-    # this doesn't start the game yet
-    if playerIDCount is 0
-      table = new poker.Table 1, 2, 2, 10, 200, 200
+      if gameRoomId of gameRooms
+        gameRoom = gameRooms[gameRoomId]
+      else
+        # when the first player joins all variables need to be initialized
+        gameRooms[gameRoomId] = gameRoom =
+          clients: {} # contains a list of socket objects, one for each client
+          table: new pokerEngine.Table 1, 2, 2, 10, 200, 200 # our master table object; this doesn't start the game yet
+          lastBet: 0
 
-    playerID = cookie.parse(socket.request.headers.cookie).playerID if socket.request.headers.cookie?
+      playerID = playerId
+  
+      # if this is a new client, add it to the list of clients, and create a player Object for them
+      if not playerID? or not gameRoom.clients[playerID]?
+        playerID = gameRoom.table.players.length
+        gameRoom.table.AddPlayer playerID, playerID, "No Name", 200
+      else if clientDisconnectTimeouts[playerID]?
+        console.log "Cancelling disconnection of player # ", playerID
+        clearTimeout clientDisconnectTimeouts[playerID]
+        delete clientDisconnectTimeouts[playerID]
 
-    # if this is a new client, add it to the list of clients, and create a player Object for them
-    if not playerID? or not clients[playerID]?
-      playerID = playerIDCount
-      players.push playerID
-      table.AddPlayer playerID, playerIDCount, "No Name", 200
-      playerIDCount++
-    else if clientDisconnectTimeouts[playerID]?
-      console.log "Cancelling disconnection of player # ", playerID
-      clearTimeout clientDisconnectTimeouts[playerID]
-      delete clientDisconnectTimeouts[playerID]
-
-    clients[playerID] = {socket, playerID}
-    playerID = clients[playerID].playerID
-    socket.emit "setPlayerId", clients[playerID].playerID
-
-    # if player joins after the game has started, let's send them their hand now
-    if table.game?
-      socket.emit "addHand", table.players[clients[playerID].playerID].cards
-
-    sendState table
+      gameRoom.clients[playerID] = {socket, gameRoomId, playerID}
+      socket.emit "setPlayerId", playerID
+  
+      # if player joins after the game has started, let's send them their hand now
+      if gameRoom.table.game?
+        socket.emit "addHand", gameRoom.table.players[playerID].cards
+  
+      sendState gameRoom.table, gameRoomId
 
     socket.on "startGame", ->
       # start the game
-      table.StartGame()
+      gameRoom.table.StartGame()
       # give each player their hand
-      for key, client of clients
-        client.socket.emit "addHand", table.players[client.playerID].cards
-      sendState table
+      for key, client of gameRoom.clients
+        client.socket.emit "addHand", gameRoom.table.players[client.playerID].cards
+      sendState gameRoom.table, gameRoomId
 
     socket.on "fold", ->
-      table.players[playerID].Fold()
-      sendState table
+      gameRoom.table.players[playerID].Fold()
+      sendState gameRoom.table, gameRoomId
 
     socket.on "bet", (amount) ->
       amount = parseInt amount, 10
       # check is a bet of 0
       if amount is 0
-        table.players[playerID].Check()
+        gameRoom.table.players[playerID].Check()
         # all in is a bet of all chips
-      else if amount is table.players[playerID].chips
-        table.players[playerID].AllIn()
+      else if amount is gameRoom.table.players[playerID].chips
+        gameRoom.table.players[playerID].AllIn()
         # call is a bet the same amount as the last bet
-      else if amount is lastBet
-        table.players[playerID].Call()
+      else if amount is gameRoom.lastBet
+        gameRoom.table.players[playerID].Call()
         # betting more than last time (bet or raise)
       else
-        table.players[playerID].Bet amount
-        lastBet = amount
-      sendState table
+        gameRoom.table.players[playerID].Bet amount
+        gameRoom.lastBet = amount
+      sendState gameRoom.table, gameRoomId
 
     socket.on "showHand", ->
       # a player decided to show their hand, let's send their hand to everyone
-      for key, client of clients
+      for key, client of gameRoom.clients
         client.socket.emit "showHand", {
           playerID,
-          cards: table.players[playerID].cards
+          cards: gameRoom.table.players[playerID].cards
         }
 
-    socket.on "removePlayer", ->
+    socket.on "renamePlayer", (name) ->
+      gameRoom.table.players[playerID].playerName = name
+      sendState gameRoom.table, gameRoomId
+
+    socket.on "disconnect", ->
+      return
       console.log "Setting timeout to remove player ", playerID, " in 10 seconds"
       clientDisconnectTimeouts[playerID] = setTimeout ->
         console.log "Removing player # ", playerID, " now"
-        table.players.splice playerID, 1 # @todo handle properly
-        sendState table
+        gameRoom.table.players.splice playerID, 1
+        sendState gameRoom.table, gameRoomId
       , 10000
-
-    socket.on "renamePlayer", (name) ->
-      table.players[playerID].playerName = name
-      sendState table
 
   ###
     Get a state (table) object and turn it into a JSON string
@@ -134,6 +157,5 @@ exports.server = ->
   ###
     Send the state to all clients to keep them in sync with the internal state of our application
   ###
-  sendState = (state) ->
-    for id, client of clients
-      client.socket.emit "updateState", toJSONState state
+  sendState = (state, gameRoomId) ->
+    io.of("/gameroom").in(gameRoomId).emit "updateState", toJSONState state
