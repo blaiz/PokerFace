@@ -3,15 +3,15 @@
   "version": "0.0.0",
   "main": "lib/pokerface-server.js",
   "description": "PokerFace Server",
-  "homepage": "https://github.com//pokerface-server",
-  "bugs": "https://github.com//pokerface-server/issues",
+  "homepage": "https://github.com/blaiz/pokerface-server",
+  "bugs": "https://github.com/blaiz/pokerface-server/issues",
   "author": {
     "name": "",
     "email": ""
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com//pokerface-server"
+    "url": "https://github.com/blaiz/pokerface-server"
   },
   "licenses": [
     {
@@ -33,7 +33,7 @@
     "coffee-script": "latest",
     "cors": "^2.4.1",
     "express": "^4.8.2",
-    "node-poker": "ChrisZieba/node-poker",
+    "node-poker": "blaiz/node-poker",
     "socket.io": "^1.0.6",
     "webrtc.io": "0.0.4"
   },
