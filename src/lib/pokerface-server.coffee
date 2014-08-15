@@ -82,6 +82,14 @@ exports.server = ->
         client.socket.emit "addHand", gameRoom.table.players[client.playerID].cards
       sendState gameRoom.table, gameRoomId
 
+    socket.on "check", ->
+      gameRoom.table.players[playerID].Check()
+      sendState gameRoom.table, gameRoomId
+
+    socket.on "call", ->
+      gameRoom.table.players[playerID].Call()
+      sendState gameRoom.table, gameRoomId
+
     socket.on "fold", ->
       gameRoom.table.players[playerID].Fold()
       sendState gameRoom.table, gameRoomId
@@ -91,16 +99,16 @@ exports.server = ->
       # check is a bet of 0
       if amount is 0
         gameRoom.table.players[playerID].Check()
-        # all in is a bet of all chips
+      # all in is a bet of all chips
       else if amount is gameRoom.table.players[playerID].chips
         gameRoom.table.players[playerID].AllIn()
-        # call is a bet the same amount as the last bet
-      else if amount is gameRoom.lastBet
+      # call is a bet the same amount as the last bet
+      else if (amount + gameRoom.table.game.bets[playerID]) is gameRoom.lastBet
         gameRoom.table.players[playerID].Call()
-        # betting more than last time (bet or raise)
+      # betting more than last time (bet or raise)
       else
         gameRoom.table.players[playerID].Bet amount
-        gameRoom.lastBet = amount
+        gameRoom.lastBet = gameRoom.table.game.bets[playerID]
       sendState gameRoom.table, gameRoomId
 
     socket.on "showHand", ->
