@@ -14,13 +14,14 @@ exports.server = ->
   pokerEngine = require "node-poker"
 
   app = require("express")()
-  io = require("socket.io").listen 10001
-  require('webrtc.io').listen 10002
+  server = require("http").createServer(app)
+  io = require("socket.io").listen server
+#  require('webrtc.io').listen 10002
   cors = require "cors"
 
   app.use cors()
 
-  app.listen process.env.PORT || 10000
+  server.listen process.env.PORT || 10000
   console.log "Listening on port ", process.env.PORT || 10000
 
   app.post "/gameroom", (req, res) ->
